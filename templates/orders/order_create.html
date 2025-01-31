@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">
+        {% if form.instance.pk %}
+            Редактировать заказ
+        {% else %}
+            Новый заказ
+        {% endif %}
+    </h2>
+
+    <form action="" method="post" class="bg-light p-4 rounded shadow-sm col-md-8 mx-auto">
+        {% csrf_token %}
+
+        <!-- поле для ввода номера стола -->
+        <div class="mb-3">
+            {{ form|crispy }}
+        </div>
+
+        <!-- выбор блюда и цены -->
+        <div id="items-container" class="mb-3">
+            <div class="input-group mb-3 item-select">
+                <label class="input-group-text">Блюдо</label>
+                <select class="form-select" name="items">
+                    <option selected value="">Блюдо не выбрано...</option>
+                    {% for item in items %}
+                        <option value="{{ item.id }}">{{ item.name }}</option>
+                    {% endfor %}
+                </select>
+                <span class="input-group-text">Цена</span>
+                <input type="number" class="form-control" name="prices" min="1" max="99999999" placeholder="Введите цену">
+            </div>
+        </div>
+
+        <!-- добавить блюдо -->
+        <button type="button" class="btn btn-outline-secondary mb-3" id="add-item">➕ Добавить еще одно блюдо</button>
+
+        <!-- отправить форму -->
+        <div class="mt-4">
+            <button type="submit" class="btn btn-success">💾 Сохранить</button>
+            <a href="{% url 'order_list' %}" class="btn btn-secondary">↩️ Назад к заказам</a>
+        </div>
+    </form>
+
+    <!-- вывод сообщений -->
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} mt-4 text-center col-12">
+            {{ message }}
+        </div>
+    {% endfor %}
+</div>
+
+<script>
+    document.getElementById("add-item").addEventListener("click", function () {
+        let container = document.getElementById("items-container");
+        let newItem = container.firstElementChild.cloneNode(true);
+        newItem.querySelector("select").value = "";
+        newItem.querySelector("input").value = "";
+        container.appendChild(newItem);
+    });
+</script>
+{% endblock %}

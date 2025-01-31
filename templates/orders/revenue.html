@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Общий объем выручки{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h2 class="mb-4">Общий объем выручки</h2>
+
+    <p class="lead"><strong>{{ total_revenue|floatformat:2 }} руб.</strong></p>
+    
+    <a href="{% url 'order_list' %}" class="btn btn-primary">
+        <i class="fas fa-arrow-left"></i> Вернуться к списку заказов
+    </a>
+</div>
+{% endblock %}

@@ -1,0 +1,108 @@
+[
+{
+  "model": "orders.item",
+  "pk": 1,
+  "fields": {
+    "name": "Суп"
+  }
+},
+{
+  "model": "orders.item",
+  "pk": 2,
+  "fields": {
+    "name": "Салат"
+  }
+},
+{
+  "model": "orders.item",
+  "pk": 3,
+  "fields": {
+    "name": "Кофе"
+  }
+},
+{
+  "model": "orders.item",
+  "pk": 4,
+  "fields": {
+    "name": "Пирог"
+  }
+},
+{
+  "model": "orders.order",
+  "pk": 1,
+  "fields": {
+    "table_number": 1,
+    "status": "ready"
+  }
+},
+{
+  "model": "orders.order",
+  "pk": 2,
+  "fields": {
+    "table_number": 2,
+    "status": "paid"
+  }
+},
+{
+  "model": "orders.order",
+  "pk": 3,
+  "fields": {
+    "table_number": 3,
+    "status": "pending"
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 1,
+  "fields": {
+    "order": 1,
+    "item": 1,
+    "price": "250.00"
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 2,
+  "fields": {
+    "order": 1,
+    "item": 2,
+    "price": "275.00"
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 3,
+  "fields": {
+    "order": 1,
+    "item": 3,
+    "price": "150.00"
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 4,
+  "fields": {
+    "order": 2,
+    "item": 3,
+    "price": "200.00"
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 5,
+  "fields": {
+    "order": 3,
+    "item": 4,
+    "price": "300.00"
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": 6,
+  "fields": {
+    "order": 3,
+    "item": 3,
+    "price": "260.00"
+  }
+}
+]
