@@ -49,4 +49,5 @@ docker-compose exec app poetry run pytest
 Для работы с API доступны следующие интерфейсы документации:
 - **Swagger UI**: [/api/docs/swagger/](http://127.0.0.1:8000/api/docs/swagger/)
 - **Redoc**: [/api/docs/redoc/](http://127.0.0.1:8000/api/docs/redoc/)
-![img.png](img.png)
+##
+![Swagger](https://github.com/regxb/orders-management-system/blob/45af99f1072cbae60fe27319799701bab6e69052/img.png)
