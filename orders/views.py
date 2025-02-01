@@ -28,7 +28,7 @@ def create_order(request: HttpRequest) -> HttpResponse:
         try:
             OrderCreateService().create_order(form, items_data)
             messages.success(request, "Заказ успешно создан.")
-            return redirect(request.META.get('HTTP_REFERER'))
+            return redirect('order_list')
         except Exception as e:
             messages.error(request, e)
 
