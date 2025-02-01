@@ -1,5 +1,3 @@
-from typing import List, Dict, Union, Optional
-
 from django.db import transaction
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from rest_framework import status
@@ -8,7 +6,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from orders.api.serializers import OrderCreateSerializer, OrderSerializer, OrderUpdateSerializer
-from orders.models import Item, Order, OrderItem
+from orders.models import Order, OrderItem
+from orders.services.order_service import OrderCreateService
 
 
 class OrderListCreateAPIView(APIView):
@@ -16,13 +15,12 @@ class OrderListCreateAPIView(APIView):
         summary="Просмотр заказов",
         responses={
             201: OpenApiResponse(response=OrderSerializer),
-            400: OpenApiResponse(description="Ошибки валидации"),
         }
     )
     def get(self, request: Request) -> Response:
         orders = Order.objects.all()
 
-        serializer: OrderSerializer = OrderSerializer(orders, many=True)
+        serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)
 
     @extend_schema(
@@ -34,44 +32,21 @@ class OrderListCreateAPIView(APIView):
         }
     )
     def post(self, request: Request) -> Response:
-        serializer: OrderCreateSerializer = OrderCreateSerializer(data=request.data)
-
+        serializer = OrderCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
-            table_number: int = serializer.validated_data["table_number"]
-            items_data: List[Dict[str, Union[int, float]]] = serializer.validated_data["items"]
-
+            table_number = serializer.validated_data["table_number"]
+            items_data = serializer.validated_data["items"]
             order: Order = Order.objects.create(table_number=table_number)
-            order_items: Union[List[OrderItem], Response] = self.create_order_items(order, items_data)
-
-            if isinstance(order_items, Response):
-                return order_items
-
-            OrderItem.objects.bulk_create(order_items)
-            return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
-
-    @staticmethod
-    def create_order_items(order: Order, items_data: List[Dict[str, Union[int, float]]]) -> Union[
-        List[OrderItem], Response]:
-        order_items: List[OrderItem] = []
-        for item_data in items_data:
             try:
-                item: Item = Item.objects.get(id=item_data["item_id"])
-                price: float = float(item_data["price"])
-                if price <= 0 or price >= 100_000_000:
-                    return Response(
-                        {"error": {"code": "invalid_price", "message": "Некорректная цена."}},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                order_items.append(OrderItem(order=order, item=item, price=price))
-            except Item.DoesNotExist:
-                return Response(
-                    {"error": {"code": "item_not_found", "message": f"Блюдо с ID {item_data['item_id']} не найдено"}},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        return order_items
+                OrderCreateService().create_order_items(items_data, order)
+            except Exception as e:
+                transaction.set_rollback(True)
+                return Response({"error": str(e.args[0])}, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
 
 class OrderDetailView(APIView):
@@ -81,46 +56,48 @@ class OrderDetailView(APIView):
         responses={
             201: OpenApiResponse(response=OrderSerializer, description="Заказ успешно обновлен"),
             400: OpenApiResponse(description="Ошибки валидации"),
+            404: OpenApiResponse(description="Заказ не найден"),
         }
     )
     def patch(self, request: Request, order_id: int) -> Response:
-        serializer: OrderUpdateSerializer = OrderUpdateSerializer(data=request.data)
+        serializer = OrderUpdateSerializer(data=request.data)
 
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
-            order: Optional[Order] = Order.objects.filter(id=order_id).first()
+            order = Order.objects.filter(id=order_id).first()
             if not order:
                 return Response(
                     {"error": {"code": "order_not_found", "message": "Заказ не найден"}},
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            status_value: Optional[str] = serializer.validated_data.get("status")
+            status_value = serializer.validated_data.get("status")
             if status_value:
                 order.status = status_value
                 order.save()
 
-            items_data: List[Dict[str, Union[int, float]]] = serializer.validated_data.get("items", [])
+            items_data = serializer.validated_data.get("items", [])
             if items_data:
                 order.items.all().delete()
-                order_items: Union[List[OrderItem], Response] = OrderListCreateAPIView.create_order_items(order, items_data)
-                if isinstance(order_items, Response):
-                    return order_items
-                OrderItem.objects.bulk_create(order_items)
+                try:
+                    OrderCreateService().create_order_items(items_data, order)
+                except Exception as e:
+                    transaction.set_rollback(True)
+                    return Response({"error": str(e.args[0])}, status=status.HTTP_400_BAD_REQUEST)
 
             return Response(OrderSerializer(order).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Удаление заказа",
         responses={
-            201: OpenApiResponse(description="Заказ успешно удален"),
-            400: OpenApiResponse(description="Ошибки валидации"),
+            204: OpenApiResponse(description="Заказ успешно удален"),
+            404: OpenApiResponse(description="Заказ не найден"),
         }
     )
     def delete(self, request: Request, order_id: int) -> Response:
-        order: Optional[Order] = Order.objects.filter(id=order_id).first()
+        order = Order.objects.filter(id=order_id).first()
         if not order:
             return Response(
                 {"error": {"code": "order_not_found", "message": "Заказ не найден"}},
@@ -145,8 +122,8 @@ class OrderSearchAPIView(APIView):
     )
     def get(self, request: Request) -> Response:
         orders = Order.objects.all()
-        status_param: Optional[str] = request.GET.get("status")
-        table_id: Optional[str] = request.GET.get("table_id")
+        status_param = request.GET.get("status")
+        table_id = request.GET.get("table_id")
 
         if table_id:
             orders = orders.filter(table_number=table_id)
@@ -154,5 +131,5 @@ class OrderSearchAPIView(APIView):
         if status_param:
             orders = orders.filter(status=status_param)
 
-        serializer: OrderSerializer = OrderSerializer(orders, many=True)
+        serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)

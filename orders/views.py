@@ -19,14 +19,14 @@ def get_orders(request: HttpRequest) -> HttpResponse:
 
 
 def create_order(request: HttpRequest) -> HttpResponse:
-    context = {"items": Item.objects.values("name", "id")}
-    context.update({'form': CreateOrderForm})
+    context = {"items": Item.objects.values("name", "id"), 'form': CreateOrderForm}
     if request.method == 'POST':
         form = CreateOrderForm(request.POST)
         items = request.POST.getlist('items')
         prices = request.POST.getlist("prices")
+        items_data = [{"item_id": item_data[0], "price": item_data[1]} for item_data in zip(items, prices)]
         try:
-            OrderCreateService(form, items, prices).create_order()
+            OrderCreateService().create_order(form, items_data)
             messages.success(request, "Заказ успешно создан.")
             return redirect(request.META.get('HTTP_REFERER'))
         except Exception as e:

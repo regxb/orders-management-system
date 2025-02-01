@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
 from rest_framework import serializers
 
 from orders.models import Order, OrderItem
@@ -5,11 +6,18 @@ from orders.models import Order, OrderItem
 
 class OrderItemCreateSerializer(serializers.Serializer):
     item_id = serializers.IntegerField()
-    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(0.01),
+            MaxValueValidator(10_000_000)
+        ]
+    )
 
 
 class OrderCreateSerializer(serializers.Serializer):
-    table_number = serializers.IntegerField()
+    table_number = serializers.IntegerField(validators=[MinValueValidator(1)])
     items = OrderItemCreateSerializer(many=True)
 
 

@@ -1,27 +1,27 @@
-from typing import List, Optional, Type
+from typing import Any
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import transaction, DatabaseError, IntegrityError
 from django.db.models import QuerySet
 
+from orders.forms import OrderSearchForm, UpdateOrderForm, OrderItemFormSet, CreateOrderForm
 from orders.models import OrderItem, Item, Order
-from orders.forms import OrderSearchForm, UpdateOrderForm, OrderItemFormSet
 
 
 class ItemNotFoundError(Exception):
     def __init__(self) -> None:
-        self.message: str = "Блюдо не найдено."
+        self.message = "Блюдо не найдено."
         super().__init__(self.message)
 
 
 class OrderService:
     def __init__(self, form: OrderSearchForm) -> None:
-        self.form: OrderSearchForm = form
+        self.form = form
 
     def get(self, orders: QuerySet[Order]) -> QuerySet[Order]:
         if self.form.is_valid():
-            table_number: Optional[int] = self.form.cleaned_data.get("table_number")
-            status: Optional[str] = self.form.cleaned_data.get("status")
+            table_number = self.form.cleaned_data.get("table_number")
+            status = self.form.cleaned_data.get("status")
 
             if table_number:
                 orders = orders.filter(table_number=table_number)
@@ -36,41 +36,40 @@ class OrderService:
 
 
 class OrderCreateService:
-    def __init__(self, form: Type[Order], items: List[str], prices: List[str]) -> None:
-        self.form: Type[Order] = form
-        self.items: List[str] = items
-        self.prices: List[str] = prices
 
-    def create_order(self) -> None:
-        if self.form.is_valid():
+    def create_order(self, form: CreateOrderForm, items_data: list[dict[str, Any]]) -> None:
+        if form.is_valid():
             with transaction.atomic():
-                order: Order = self.form.save()
-                self._create_order_items(order)
+                order = form.save()
+                self.create_order_items(items_data, order)
         else:
             raise ValueError("Некорректный номер стола.")
 
-    def _create_order_items(self, order: Order) -> None:
-        if any(self.items) and any(self.prices):
-            all_items: List[OrderItem] = []
-            for item, price in zip(self.items, self.prices):
+    @staticmethod
+    def create_order_items(items_data: list[dict[str, Any]], order: Order) -> None:
+        if items_data:
+            all_items = []
+            for item_data in items_data:
                 try:
-                    item_id: int = int(item)
-                    item_obj: Item = Item.objects.get(id=item_id)
+                    item_obj = Item.objects.get(id=item_data["item_id"])
                 except Exception:
                     raise ItemNotFoundError()
 
-                new_item = OrderItem(order=order, item=item_obj, price=price)
+                new_item = OrderItem(order=order, item=item_obj, price=item_data["price"])
                 all_items.append(new_item)
-            OrderItem.objects.bulk_create(all_items)
+            try:
+                OrderItem.objects.bulk_create(all_items)
+            except (IntegrityError, DatabaseError) as e:
+                raise e
         else:
-            raise ValidationError("Выберите хотя бы одно блюдо.")
+            raise ValidationError("Должно быть указано хотя бы одно блюдо.")
 
 
 class OrderUpdateService:
     def __init__(self, form: UpdateOrderForm, order: Order, formset: OrderItemFormSet) -> None:
-        self.form: UpdateOrderForm = form
-        self.order: Order = order
-        self.formset: OrderItemFormSet = formset
+        self.form = form
+        self.order = order
+        self.formset = formset
 
     def update_order(self) -> None:
         if not self.form.is_valid():
@@ -95,7 +94,7 @@ class OrderUpdateService:
             raise Exception(f"Ошибка при обновлении заказа: {str(e)}")
 
     def _update_order_items(self, formset: OrderItemFormSet) -> None:
-        instances: List[OrderItem] = formset.save(commit=False)
+        instances = formset.save(commit=False)
 
         for instance in instances:
             instance.order = self.order
