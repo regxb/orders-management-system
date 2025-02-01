@@ -29,12 +29,12 @@ docker-compose up --build -d
 ```
 Приложение будет доступно по адресу: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
-### 5. Наполнение базы данных
+### 4. Наполнение базы данных
 ```sh
 docker-compose exec app poetry run python manage.py loaddata orders/fixtures/orders.json
 ```
 
-### 6. Создание суперпользователя
+### 5. Создание суперпользователя
 ```sh
 docker-compose exec app poetry run python manage.py createsuperuser
 ```
@@ -50,4 +50,4 @@ docker-compose exec app poetry run pytest
 - **Swagger UI**: [/api/docs/swagger/](http://127.0.0.1:8000/api/docs/swagger/)
 - **Redoc**: [/api/docs/redoc/](http://127.0.0.1:8000/api/docs/redoc/)
 ##
-![Swagger](https://github.com/regxb/orders-management-system/blob/45af99f1072cbae60fe27319799701bab6e69052/img.png)
+![Swagger](https://github.com/regxb/orders-management-system/blob/80374a96330c955463829911f099ad439b33aea1/img_1.png)
