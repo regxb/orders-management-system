@@ -29,12 +29,12 @@ docker-compose up --build -d
 ```
 Приложение будет доступно по адресу: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
-### 5. Наполнение базы данных
+### 4. Наполнение базы данных
 ```sh
 docker-compose exec app poetry run python manage.py loaddata orders/fixtures/orders.json
 ```
 
-### 6. Создание суперпользователя
+### 5. Создание суперпользователя
 ```sh
 docker-compose exec app poetry run python manage.py createsuperuser
 ```
