@@ -45,7 +45,7 @@ def test_delete_order(client, order, item):
 
 @pytest.mark.django_db
 def test_get_orders(client, item):
-    url = "/api/orders/list/"
+    url = "/api/orders/"
     response = client.get(url)
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(response.data, list)

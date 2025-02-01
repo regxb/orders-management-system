@@ -11,7 +11,20 @@ from orders.api.serializers import OrderCreateSerializer, OrderSerializer, Order
 from orders.models import Item, Order, OrderItem
 
 
-class CreateOrderApiView(APIView):
+class OrderListCreateAPIView(APIView):
+    @extend_schema(
+        summary="Просмотр заказов",
+        responses={
+            201: OpenApiResponse(response=OrderSerializer),
+            400: OpenApiResponse(description="Ошибки валидации"),
+        }
+    )
+    def get(self, request: Request) -> Response:
+        orders = Order.objects.all()
+
+        serializer: OrderSerializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
+
     @extend_schema(
         summary="Создание нового заказа",
         request=OrderCreateSerializer,
@@ -61,7 +74,7 @@ class CreateOrderApiView(APIView):
         return order_items
 
 
-class OrderUpdateAPIView(APIView):
+class OrderDetailView(APIView):
     @extend_schema(
         summary="Изменение данных заказа",
         request=OrderUpdateSerializer,
@@ -92,7 +105,7 @@ class OrderUpdateAPIView(APIView):
             items_data: List[Dict[str, Union[int, float]]] = serializer.validated_data.get("items", [])
             if items_data:
                 order.items.all().delete()
-                order_items: Union[List[OrderItem], Response] = CreateOrderApiView.create_order_items(order, items_data)
+                order_items: Union[List[OrderItem], Response] = OrderListCreateAPIView.create_order_items(order, items_data)
                 if isinstance(order_items, Response):
                     return order_items
                 OrderItem.objects.bulk_create(order_items)
@@ -121,22 +134,7 @@ class OrderUpdateAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class OrderListAPIView(APIView):
-    @extend_schema(
-        summary="Просмотр заказов",
-        responses={
-            201: OpenApiResponse(response=OrderSerializer),
-            400: OpenApiResponse(description="Ошибки валидации"),
-        }
-    )
-    def get(self, request: Request) -> Response:
-        orders = Order.objects.all()
-
-        serializer: OrderSerializer = OrderSerializer(orders, many=True)
-        return Response(serializer.data)
-
-
-class OrderFindAPIView(APIView):
+class OrderSearchAPIView(APIView):
     @extend_schema(
         summary="Поиск заказов",
         responses={200: OrderSerializer},
